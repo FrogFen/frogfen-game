@@ -1,26 +1,28 @@
-/* FrogFen — play-test build v0.3.1
-   • PLAYTEST_RANDOM = true  → unique board each reload
-   • Guaranteed exactly five overlapping starter words
-   • Dictionary & scoring unchanged
------------------------------------------------------*/
+/*  FrogFen – play-test build v0.3.2
+    • PLAYTEST_RANDOM = true  => random board every reload
+      set to false for daily board seeded by “YYYY-MM-DD”
+    • Guarantees exactly FIVE overlapping starter words
+      and rejects any invalid side-word sequences
+------------------------------------------------------------------- */
+
 const BOARD_SIZE = 11;
 
-/* — DOM references — */
+/* ── DOM ───────────────────────────────────────────── */
 const boardEl   = document.getElementById('board');
 const bankEl    = document.getElementById('letter-bank');
 const submitBtn = document.getElementById('submit-btn');
 const totalEl   = document.getElementById('total-score');
 const detailBox = document.getElementById('detail-box');
 
-/* — Data — */
-const dictionary = new Set(window.dictionaryWords);   // demo list (≈3 000 words)
-const letterScores = {A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,
-                      P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10};
+/* ── Data ─────────────────────────────────────────── */
+const dictionary   = new Set(window.dictionaryWords);   // demo list (≈3 000)
+const letterScores = {A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,
+                      O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10};
 const distribution =
   "EEEEEEEEEEEEEEEEEEEEAAAAAAAIIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ";
 
-/* — Seed logic — */
-const PLAYTEST_RANDOM = true;                       // set false for daily board
+/* ── Seed logic ───────────────────────────────────── */
+const PLAYTEST_RANDOM = true;                     // <= flip to false for launch
 const seedStr = PLAYTEST_RANDOM ? Date.now().toString()
                                 : new Date().toISOString().slice(0,10);
 
@@ -34,16 +36,16 @@ function mulberry32(a){
 const rand   = mulberry32(seed);
 const choice = arr => arr[Math.floor(rand()*arr.length)];
 
-/* — Build empty 11×11 board — */
+/* ── Build empty board ────────────────────────────── */
 const boardCells = [];
-for (let r=0; r<BOARD_SIZE; r++){
-  for (let c=0; c<BOARD_SIZE; c++){
+for (let r=0;r<BOARD_SIZE;r++){
+  for (let c=0;c<BOARD_SIZE;c++){
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.row = r;
     cell.dataset.col = c;
-    cell.ondragover = e => e.preventDefault();
-    cell.ondrop = e => {
+    cell.ondragover = e=>e.preventDefault();
+    cell.ondrop = e=>{
       const id = e.dataTransfer.getData('text');
       const tile = document.getElementById(id);
       if (!tile || cell.firstChild) return;
@@ -54,7 +56,7 @@ for (let r=0; r<BOARD_SIZE; r++){
   }
 }
 
-/* — Random bonus tiles — */
+/* ── Bonus tiles ──────────────────────────────────── */
 const bonusPlan = [
   ['word',1.1,5,'green1'],['word',1.5,3,'green15'],['word',2,1,'green2'],
   ['letter',2,5,'purple2'],['letter',3,3,'purple3'],['letter',5,1,'purple5']
@@ -62,85 +64,128 @@ const bonusPlan = [
 const booked = new Set();
 bonusPlan.forEach(([type,mult,count,cls])=>{
   let p=0;
-  while (p<count){
+  while(p<count){
     const idx=Math.floor(rand()*boardCells.length);
     if(booked.has(idx)) continue;
     booked.add(idx);
-    const cell=boardCells[idx];
-    cell.dataset.bonusType=type;
-    cell.dataset.bonusMult=mult;
+    const cell = boardCells[idx];
+    cell.dataset.bonusType = type;
+    cell.dataset.bonusMult = mult;
     cell.classList.add(cls);
-    const tag=document.createElement('span');
-    tag.className='bonus';
+    const tag = document.createElement('span');
+    tag.className = 'bonus';
     tag.textContent = type==='word' ? `${mult}xW` : `${mult}xL`;
     cell.appendChild(tag);
     p++;
   }
 });
 
-/* — Place exactly five starter words — */
+/* ── Starter words: exactly five, all valid ───────── */
 (function placeStarterWords(){
-  const MAX_TOTAL_RETRIES = 3;
+  const MAX_GLOBAL_ATTEMPTS = 4;   // full restarts
 
-  for (let pass=0; pass<MAX_TOTAL_RETRIES; pass++){
-    // clear board letters
-    boardCells.forEach(c => { delete c.dataset.letter; c.textContent = ''; });
+  /* helper: collect every contiguous board word (≥2 letters) */
+  const collectWords = ()=>{
+    const found = new Set();
 
-    const placed=[];
-    const fits = (word,r,c,d)=>{
-      if(d==='h'){
-        if(c+word.length>BOARD_SIZE) return false;
-        for(let i=0;i<word.length;i++){
-          const cell=boardCells[r*BOARD_SIZE + c+i];
-          if(cell.dataset.letter && cell.dataset.letter!==word[i]) return false;
-        }
-      }else{
-        if(r+word.length>BOARD_SIZE) return false;
-        for(let i=0;i<word.length;i++){
-          const cell=boardCells[(r+i)*BOARD_SIZE + c];
-          if(cell.dataset.letter && cell.dataset.letter!==word[i]) return false;
-        }
+    // horizontal
+    for(let r=0;r<BOARD_SIZE;r++){
+      let w="";
+      for(let c=0;c<BOARD_SIZE;c++){
+        const cell=boardCells[r*BOARD_SIZE+c];
+        if(cell.dataset.letter) w+=cell.dataset.letter;
+        else { if(w.length>1) found.add(w.toLowerCase()); w=""; }
       }
-      return true;
-    };
-    const draw = (word,r,c,d)=>{
-      for(let i=0;i<word.length;i++){
-        const cell=d==='h'? boardCells[r*BOARD_SIZE+c+i]
-                          : boardCells[(r+i)*BOARD_SIZE+c];
-        cell.dataset.letter = word[i];
-        cell.textContent    = word[i];
-      }
-    };
-
-    // first word centred horizontally
-    const first = choice([...dictionary]).toUpperCase().slice(0,8);
-    const row   = Math.floor(BOARD_SIZE/2);
-    const col   = Math.floor((BOARD_SIZE-first.length)/2);
-    draw(first,row,col,'h'); placed.push(first);
-
-    let tries=0;
-    while (placed.length<5 && tries<1000){
-      const w   = choice([...dictionary]).toUpperCase().slice(0,8);
-      const dir = Math.random()<0.5 ? 'h' : 'v';
-      const anchor = Math.floor(rand()*w.length);
-      const ch = w[anchor];
-
-      const matches = boardCells.filter(c=>c.dataset.letter===ch);
-      if(!matches.length){ tries++; continue; }
-
-      const tgt = choice(matches);
-      const sr  = dir==='h' ? +tgt.dataset.row             : +tgt.dataset.row - anchor;
-      const sc  = dir==='h' ? +tgt.dataset.col - anchor    : +tgt.dataset.col;
-
-      if (fits(w,sr,sc,dir)){ draw(w,sr,sc,dir); placed.push(w); }
-      tries++;
+      if(w.length>1) found.add(w.toLowerCase());
     }
-    if (placed.length===5) return;   // success!
+    // vertical
+    for(let c=0;c<BOARD_SIZE;c++){
+      let w="";
+      for(let r=0;r<BOARD_SIZE;r++){
+        const cell=boardCells[r*BOARD_SIZE+c];
+        if(cell.dataset.letter) w+=cell.dataset.letter;
+        else { if(w.length>1) found.add(w.toLowerCase()); w=""; }
+      }
+      if(w.length>1) found.add(w.toLowerCase());
+    }
+    return found;
+  };
+
+  for(let pass=0;pass<MAX_GLOBAL_ATTEMPTS;pass++){
+    boardCells.forEach(c=>{ delete c.dataset.letter; c.textContent=""; });
+
+    /* place first word in centre row */
+    const first = choice([...dictionary]).toUpperCase().slice(0,8);
+    const r0    = Math.floor(BOARD_SIZE/2);
+    const c0    = Math.floor((BOARD_SIZE-first.length)/2);
+    for(let i=0;i<first.length;i++){
+      const cell=boardCells[r0*BOARD_SIZE+c0+i];
+      cell.dataset.letter=first[i]; cell.textContent=first[i];
+    }
+
+    let success=true;
+    let wordsPlaced = 1;
+    let attempts    = 0;
+
+    while(wordsPlaced<5 && attempts<1500){
+      attempts++;
+      const word = choice([...dictionary]).toUpperCase().slice(0,8);
+      const dir  = Math.random()<0.5?'h':'v';
+      const anchor = Math.floor(rand()*word.length);
+      const ch     = word[anchor];
+
+      const anchors = boardCells.filter(c=>c.dataset.letter===ch);
+      if(!anchors.length) continue;
+
+      const target = choice(anchors);
+      const sr = dir==='h' ? +target.dataset.row           : +target.dataset.row-anchor;
+      const sc = dir==='h' ? +target.dataset.col-anchor    : +target.dataset.col;
+
+      // check fit
+      let fit=true;
+      if(dir==='h'){
+        if(sc<0||sc+word.length>BOARD_SIZE) fit=false;
+        else
+          for(let i=0;i<word.length;i++){
+            const cell=boardCells[sr*BOARD_SIZE+sc+i];
+            if(cell.dataset.letter && cell.dataset.letter!==word[i]){ fit=false; break; }
+          }
+      }else{
+        if(sr<0||sr+word.length>BOARD_SIZE) fit=false;
+        else
+          for(let i=0;i<word.length;i++){
+            const cell=boardCells[(sr+i)*BOARD_SIZE+sc];
+            if(cell.dataset.letter && cell.dataset.letter!==word[i]){ fit=false; break; }
+          }
+      }
+      if(!fit) continue;
+
+      // tentatively draw new letters
+      const added=[];
+      for(let i=0;i<word.length;i++){
+        const cell = dir==='h'
+          ? boardCells[sr*BOARD_SIZE+sc+i]
+          : boardCells[(sr+i)*BOARD_SIZE+sc];
+        if(!cell.dataset.letter){
+          cell.dataset.letter=word[i]; cell.textContent=word[i]; added.push(cell);
+        }
+      }
+
+      // validate all board words
+      const invalid = [...collectWords()].some(w=>!dictionary.has(w));
+      if(invalid){
+        added.forEach(c=>{ delete c.dataset.letter; c.textContent=""; });
+      }else{
+        wordsPlaced++;
+      }
+    }
+    if(wordsPlaced===5 && ![...collectWords()].some(w=>!dictionary.has(w))) return;
+    success=false;
   }
-  alert("Failed to place 5 starter words after several retries.");
+  if(!success) alert("Board generation failed – reload");
 })();
 
-/* — 15-tile rack — */
+/* ── Letter rack ───────────────────────────── */
 const rack=[];
 while(rack.length<15) rack.push(choice(distribution));
 rack.forEach((ltr,i)=>{
@@ -151,13 +196,13 @@ rack.forEach((ltr,i)=>{
   bankEl.appendChild(tile);
 });
 
-/* — Gameplay — */
+/* ── Gameplay logic ────────────────────────── */
 let turn=0,total=0;
 const activeTiles = ()=>[...boardEl.querySelectorAll('.tile')].filter(t=>!t.dataset.locked);
-const isStraight  = tls=>{
+const straightLine = tls=>{
   const rows=tls.map(t=>+t.parentElement.dataset.row);
   const cols=tls.map(t=>+t.parentElement.dataset.col);
-  return rows.every(r=>r===rows[0])||cols.every(c=>c===cols[0]);
+  return rows.every(r=>r===rows[0]) || cols.every(c=>c===cols[0]);
 };
 
 submitBtn.onclick=()=>{
@@ -165,7 +210,7 @@ submitBtn.onclick=()=>{
 
   const tiles=activeTiles();
   if(!tiles.length){alert('Place tiles');return;}
-  if(!isStraight(tiles)){alert('Tiles must form a straight line');return;}
+  if(!straightLine(tiles)){alert('Tiles must form a straight line');return;}
 
   tiles.sort((a,b)=>{
     const ar=+a.parentElement.dataset.row, br=+b.parentElement.dataset.row;
@@ -177,16 +222,17 @@ submitBtn.onclick=()=>{
 
   let base=0,mult=1;
   tiles.forEach(t=>{
+    let score=letterScores[t.textContent];
     const cell=t.parentElement;
-    let sc=letterScores[t.textContent];
-    if(cell.dataset.bonusType==='letter') sc*=+cell.dataset.bonusMult;
+    if(cell.dataset.bonusType==='letter') score*=+cell.dataset.bonusMult;
     if(cell.dataset.bonusType==='word')   mult*=+cell.dataset.bonusMult;
-    base+=sc;
+    base+=score;
   });
   const gained=Math.round(base*mult);
   total+=gained; totalEl.textContent=total;
-  detailBox.textContent+=`${word.toUpperCase()}: ${base} × ${mult.toFixed(2)} = ${gained}\n`;
-  tiles.forEach(t=>t.dataset.locked='1');
+  detailBox.textContent += `${word.toUpperCase()}: ${base} × ${mult.toFixed(2)} = ${gained}\n`;
 
-  turn++; if(turn===3) alert('Game over!  Total '+total);
+  tiles.forEach(t=>t.dataset.locked='1');
+  turn++;
+  if(turn===3) alert('Game over!  Total '+total);
 };
