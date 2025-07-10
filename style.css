@@ -12,3 +12,18 @@ h1{margin:6px 0 12px;letter-spacing:2px;font-size:1.6rem}
 #detail-box{white-space:pre-wrap;background:#d0e8d0;padding:8px;border-radius:4px;width:92vw;max-width:480px;margin:10px auto;font-family:monospace;font-size:.8rem;text-align:left;min-height:60px}
 .green1{background:#d0f2d0}.green15{background:#97e297}.green2{background:#5cc55c}
 .purple2{background:#e4d5f3}.purple3{background:#bfa4e8}.purple5{background:#7d5bb3}
+
+/* Fixed starter tiles (on the board at load)  */
+.fixed-tile{
+  pointer-events:none;          /* not draggable */
+  position:relative;
+  width:100%;height:100%;
+  background:#d9e4ed;           /* light gray-blue */
+  border:2px solid #445;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:bold;font-size:1.25rem;
+}
+.fixed-tile small{
+  position:absolute;bottom:2px;right:4px;
+  font-size:.7rem;
+}
