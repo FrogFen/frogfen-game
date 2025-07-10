@@ -1,75 +1,79 @@
-/* ---------- Global ---------- */
+/* ===== FrogFen style v0.3.4 ===== */
+
+/* ---------- Reset & base ---------- */
 *{box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   background:#f8f9fa;
   text-align:center;
-  padding:10px;
+  padding:12px;
 }
 h1{
   font-size:1.8rem;
-  margin:4px 0 14px;
+  margin:4px 0 16px;
   letter-spacing:2px;
+  font-weight:700;
 }
 
-/* ---------- Board ---------- */
+/* ---------- Board grid ---------- */
 #board{
   display:grid;
   grid-template-columns:repeat(11,1fr);
-  gap:2px;
+  gap:0;                                /* no interior gap; gridlines via border */
   width:95vw;
   max-width:460px;
-  margin:0 auto 14px;
+  margin:0 auto 16px;
 }
 .cell{
   width:100%;
   aspect-ratio:1/1;
-  background:#fff;
-  border:1px solid #ccc;
+  border:2px solid #ccc;               /* uniform grid lines */
   position:relative;
+  background:#ffffff;
 }
 
-/* ---------- Bonus colouring ---------- */
-.green1 { background:#c8f0c8; }   /* 1.1x word */
-.green15{ background:#98e198; }   /* 1.5x word */
-.green2 { background:#5ecf5e; }   /* 2x   word */
+/* ---------- Bonus cells ---------- */
+.green1 { background:#c8f0c8; }  /* 1.1x word */
+.green15{ background:#9fe29f; } /* 1.5x word */
+.green2 { background:#55c855; }  /* 2x   word */
 
-.purple2{ background:#e6daf6; }   /* 2x letter */
-.purple3{ background:#c5b0ec; }   /* 3x letter */
-.purple5{ background:#7f60bd; }   /* 5x letter */
+.purple2{ background:#e6daf6; }  /* 2x letter */
+.purple3{ background:#c8b3ef; }  /* 3x letter */
+.purple5{ background:#7856b6; }  /* 5x letter */
 
 .bonus{
   position:absolute;
-  bottom:2px; right:2px;
+  bottom:2px; right:4px;
   font-size:.55rem;
-  font-weight:bold;
+  font-weight:700;
   pointer-events:none;
 }
 
-/* ---------- Tiles ---------- */
+/* ---------- Tiles (player & starter) ---------- */
 .tile, .fixed-tile{
   position:relative;
   width:100%; height:100%;
   display:flex; align-items:center; justify-content:center;
-  font-weight:bold;
+  font-weight:700;
   font-size:1.25rem;
   user-select:none;
-  border:2px solid #444;
+  /* no border — rely on cell border for alignment */
 }
 
-/* player rack tiles */
+/* player tiles */
 .tile{
-  background:#f4dede;           /* rose-pink */
+  background:#f4dede;                  /* soft rose */
 }
 
-/* starter-word tiles (fixed) */
+/* starter (fixed) tiles */
 .fixed-tile{
-  background:#d9e4ed;           /* gray-blue */
-  pointer-events:none;
+  background:#d9e4ed;                  /* neutral gray-blue */
+  pointer-events:none;                 /* not draggable */
 }
 
-/* little score number */
-.tile small, .fixed-tile small{
+/* small score number */
+.tile small,
+.fixed-tile small{
   position:absolute;
   bottom:2px; right:4px;
   font-size:.7rem;
@@ -82,36 +86,35 @@ h1{
   gap:4px;
   width:270px;
   max-width:90vw;
-  margin:10px auto 14px;
+  margin:14px auto 18px;
 }
 
 /* ---------- Submit button ---------- */
 #submit-btn{
-  margin:8px auto;
-  padding:6px 26px;
   background:#b8f1b8;
-  border:2px solid #248a24;
-  font-weight:bold;
+  border:2px solid #2a8a2a;
+  padding:6px 28px;
+  font-weight:700;
   cursor:pointer;
+  margin-bottom:6px;
 }
-#submit-btn:hover{ background:#a6e7a6; }
+#submit-btn:hover{ background:#a6eaa6; }
 
-/* ---------- Score boxes ---------- */
+/* ---------- Score display ---------- */
 #total-score-box{
   background:#55005f;
   color:#fff;
   font-size:1.5rem;
-  padding:4px 12px;
+  padding:6px 14px;
   border-radius:4px;
-  margin:6px auto;
+  margin:4px auto 10px;
 }
-
 #detail-box{
   background:#d1ead1;
   width:94vw;
   max-width:500px;
   min-height:70px;
-  padding:8px;
+  padding:10px;
   border-radius:4px;
   white-space:pre-wrap;
   text-align:left;
@@ -121,9 +124,8 @@ h1{
   margin:0 auto;
 }
 
-/* ---------- Mobile tweaks ---------- */
+/* ---------- Mobile tweak ---------- */
 @media (max-width:480px){
-  h1{font-size:1.5rem;}
-  #board{gap:1px;}
-  .tile, .fixed-tile{font-size:1.1rem;}
+  h1   { font-size:1.55rem; }
+  .tile,.fixed-tile{ font-size:1.1rem; }
 }
