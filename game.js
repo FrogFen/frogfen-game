@@ -13,6 +13,21 @@ const BOARD_SIZE = 11;
 const boardEl   = document.getElementById('board');
 const bankEl    = document.getElementById('letter-bank');
 const submitBtn = document.getElementById('submit-btn');
+/* allow tiles to be dragged back into the rack */
+bankEl.ondragover = e => e.preventDefault();
+bankEl.ondrop = e =>{
+  e.preventDefault();
+  const id   = e.dataTransfer.getData('text');
+  const tile = document.getElementById(id);
+  if(!tile || tile.dataset.locked==='1') return;   // ignore fixed/locked
+  const oldParent = tile.parentElement;
+  bankEl.appendChild(tile);                         // put tile back in rack
+  /* if tile came from a board cell, clear that cell’s content */
+  if(oldParent.classList.contains('cell')){
+    oldParent.innerHTML = "";                       // remove text/node
+  }
+};
+
 const totalEl   = document.getElementById('total-score');
 const detailBox = document.getElementById('detail-box');
 
