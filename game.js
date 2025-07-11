@@ -1,179 +1,168 @@
-/* FrogFen – stable play-test build v0.4.3
-   • centred board, ▲ button
-   • duplicate-word scoring fixed
-   • keeps full score history            */
+/*  FrogFen  – stable play-test build  v0.4.0  */
 
-const board   = document.getElementById('board');
-const rackBox = document.getElementById('letter-bank');
-const submit  = document.getElementById('submit-btn');
-const totalEl = document.getElementById('total-score');
-const detail  = document.getElementById('detail-box');
+const BOARD = 11;                     // 11×11 grid
+const RACK  = 16;                     // two rows of eight
+const TURNS = 3;                      // demo: three moves max
 
-/* --- parameters --- */
-const SIZE   = 10;     /* 10×10 board */
-const RACK   = 16;     /* 16 tiles (2×8) */
-const points = {A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,
-                N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10};
+/* ── DOM refs ────────────────────────────────────────────── */
+const boardEl  = document.getElementById('board');
+const rackEl   = document.getElementById('letter-bank');
+const btnEl    = document.getElementById('submit-btn');
+const totalEl  = document.getElementById('total-score');
+const detailEl = document.getElementById('detail-box');
 
-/* sample bonus layout */
-const bonuses={
-  "0,0":"1.5×W","0,3":"3×L","0,5":"3×L","1,4":"1.5×W",
-  "3,1":"2×W","4,4":"5×L","6,0":"1.1×W","9,9":"2×L"
+/* ── data ───────────────────────────────────────────────── */
+const dict  = new Set(window.dictionaryWords);   // lower-case demo list
+const score = {A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,
+               O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10};
+const bag   = "EEEEEEEEEEEEEEEEEEEEAAAAAAAIIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ";
+
+/* random helper ------------------------------------------------------- */
+const r = (()=>{let s=Date.now()%1e9;return ()=>{s=Math.imul(48271,s)%2147483647;return s/2147483647;};})();
+const pick = a => a[ Math.floor(r()*a.length) ];
+
+/* ── build empty board grid ─────────────────────────────── */
+const cells = [];
+for(let y=0;y<BOARD;y++){
+  for(let x=0;x<BOARD;x++){
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.dataset.row=y; c.dataset.col=x;
+    /* drag target */
+    c.ondragover = e=>e.preventDefault();
+    c.ondrop = e=>{
+      const id=e.dataTransfer.getData('text');
+      const t=document.getElementById(id);
+      if(!t || t.dataset.locked==='1' || c.firstChild) return;
+      c.appendChild(t);
+    };
+    boardEl.appendChild(c);
+    cells.push(c);
+  }
+}
+
+/* simple symmetrical bonus pattern ----------------------- */
+const B=[                                 // (type , mult , qty , class)
+  ['word',1.1,5,'green1'],['word',1.5,3,'green15'],['word',2,1,'green2'],
+  ['letter',2,5,'purple2'],['letter',3,3,'purple3'],['letter',5,1,'purple5']
+];
+const used = new Set();
+B.forEach(([t,m,q,cls])=>{
+  while(q--){
+    let idx;
+    do idx = Math.floor(r()*cells.length); while(used.has(idx));
+    used.add(idx);
+    const c=cells[idx];
+    c.classList.add(cls);
+    c.dataset.bonusType=t;
+    c.dataset.bonusMult=m;
+    /* show hint only until a tile is placed */
+    c.textContent = (t==='word'?m+'×W':m+'×L');
+    c.style.fontSize='0.55rem';
+  }
+});
+
+/* ── helper to draw the fixed starter words --------------- */
+const starterWords = (()=>{               // keep re-rolling until 5 fit
+  const w = [...dict].filter(v=>v.length>=3 && v.length<=7);
+  while(true){
+    const choice=w.slice().sort(()=>r()-.5).slice(0,5).map(s=>s.toUpperCase());
+    if(place(choice)) return;             // place() mutates board & exits
+  }
+})();
+function place(list){
+  /* clear board cells */
+  cells.forEach(c=>{
+    if(c.dataset.letter && !c.dataset.locked){
+      delete c.dataset.letter; c.innerHTML='';
+    }
+  });
+  let ok=true;
+  list.forEach((word,i)=>{
+    const dir = i%2?'v':'h';              // alternate orientation
+    const max = BOARD - word.length;
+    const r0  = Math.floor(r()*(dir==='h'?BOARD:max));
+    const c0  = Math.floor(r()*(dir==='v'?BOARD:max));
+    for(let j=0;j<word.length;j++){
+      const r = dir==='h'?r0 : r0+j;
+      const c = dir==='h'?c0+j : c0;
+      const cell = cells[r*BOARD+c];
+      if(cell.dataset.letter && cell.dataset.letter!==word[j]) ok=false;
+    }
+    if(!ok) return;                       // clash – abort
+    // draw word
+    for(let j=0;j<word.length;j++){
+      const r = dir==='h'?r0 : r0+j;
+      const c = dir==='h'?c0+j : c0;
+      const cell = cells[r*BOARD+c];
+      cell.dataset.letter = word[j];
+      cell.dataset.locked = '1';
+      cell.innerHTML = `<div class="fixed-tile">${word[j]}<small>${score[word[j]]}</small></div>`;
+    }
+  });
+  return ok;
+}
+
+/* ── build rack -------------------------------------------------------- */
+while(rackEl.firstChild) rackEl.firstChild.remove();
+for(let i=0;i<RACK;i++){
+  const ltr = pick(bag);
+  const t = document.createElement('div');
+  t.className='tile'; t.id='t'+i; t.textContent=ltr;
+  t.draggable=true;
+  t.innerHTML = `${ltr}<small>${score[ltr]}</small>`;
+  t.ondragstart = e=>e.dataTransfer.setData('text',t.id);
+  rackEl.appendChild(t);
+}
+/* allow drag-back from board */
+rackEl.ondragover = e=>e.preventDefault();
+rackEl.ondrop = e=>{
+  const id=e.dataTransfer.getData('text');
+  const t=document.getElementById(id);
+  if(!t || t.dataset.locked==='1') return;
+  const from=t.parentElement;
+  rackEl.appendChild(t);
+  if(from.classList.contains('cell')) from.innerHTML='';
 };
 
-/* quick helpers */
-const rand = m=>Math.floor(Math.random()*m);
-const dict = new Set(window.dictionaryWords);        /* lower-case list */
+/* ── gameplay ---------------------------------------------------------- */
+let turn=0,total=0;
+const played = new Set();                 // prevent duplicate logging
 
-/* --- build board --- */
-for(let r=0;r<SIZE;r++){
-  const tr=board.insertRow();
-  for(let c=0;c<SIZE;c++){
-    const td=tr.insertCell();
-    td.dataset.row=r; td.dataset.col=c;
-    const key=`${r},${c}`; if(bonuses[key]) td.dataset.bonus=bonuses[key];
+btnEl.onclick = ()=>{
+  const tiles=[...boardEl.querySelectorAll('.tile')].filter(t=>!t.dataset.locked);
+  if(!tiles.length){ alert('place tiles'); return; }
+  /* straight line? */
+  const rows=tiles.map(t=>+t.parentElement.dataset.row);
+  const cols=tiles.map(t=>+t.parentElement.dataset.col);
+  if(!(rows.every(v=>v===rows[0])||cols.every(v=>v===cols[0]))){
+    alert('tiles must be in a straight line'); return;
   }
-}
-
-/* --- drag/drop --- */
-let dragTile=null;
-
-function makeTile(ch,locked=false){
-  const div=document.createElement('div');
-  div.className='tile'+(locked?' lock':'');
-  div.draggable=!locked;
-  div.textContent=ch;
-  div.dataset.letter=ch;
-  const sub=document.createElement('sub');
-  sub.textContent=points[ch];
-  div.appendChild(sub);
-  return div;
-}
-/* rack interactions */
-function populateRack(){
-  rackBox.innerHTML='';
-  const bag="EEEEEEEEEEEEEEEEAAAAAAAAIIIIIIIIOOOOOOO" +
-            "NNRR T T LLSS UUDDGGBBCCMMPPFHVWYJKQXZ";
-  while(rackBox.children.length<RACK){
-    const ch=bag[rand(bag.length)];
-    rackBox.appendChild(makeTile(ch));
-  }
-}
-populateRack();
-
-rackBox.addEventListener('dragstart',e=>e.stopPropagation());
-rackBox.addEventListener('drop',e=>{
-  e.preventDefault();
-  if(dragTile?.classList.contains('lock'))return;
-  rackBox.appendChild(dragTile);
-  dragTile.removeAttribute('data-row');
-  dragTile.removeAttribute('data-col');
-});
-
-/* board drag */
-board.addEventListener('dragstart',e=>{
-  if(!e.target.classList.contains('tile'))return;
-  dragTile=e.target;e.dataTransfer.setData('text/plain','');
-  setTimeout(()=>dragTile.classList.add('drag'),0);
-});
-board.addEventListener('dragend',()=>dragTile?.classList.remove('drag'));
-['dragover','dragenter'].forEach(ev=>{
-  board.addEventListener(ev,e=>e.preventDefault());
-});
-board.addEventListener('drop',e=>{
-  const td=e.target.closest('td'); if(!td)return;
-  if(td.querySelector('.tile'))return;
-  td.appendChild(dragTile);
-  td.classList.add('drop');
-  dragTile.dataset.row=td.dataset.row;
-  dragTile.dataset.col=td.dataset.col;
-});
-
-/* --- seed 5 words --- */
-const dirs=[[1,0],[0,1]];
-function place(word){
-  word=word.toUpperCase();
-  for(let t=0;t<50;t++){
-    const d=dirs[rand(2)];
-    const r0=rand(SIZE-d[0]*word.length);
-    const c0=rand(SIZE-d[1]*word.length);
-    let ok=true;
-    for(let i=0;i<word.length;i++){
-      const cell=board.rows[r0+d[0]*i].cells[c0+d[1]*i];
-      if(cell.firstChild){ok=false;break;}
-    }
-    if(!ok)continue;
-    for(let i=0;i<word.length;i++){
-      const cell=board.rows[r0+d[0]*i].cells[c0+d[1]*i];
-      cell.appendChild(makeTile(word[i],true));
-    }
-    return true;
-  }
-  return false;
-}
-(function seed(){
-  const words=window.dictionaryWords.filter(w=>w.length<=SIZE);
-  let placed=0;while(placed<5){ if(place(words[rand(words.length)])) placed++; }
-})();
-
-/* --- submit turn --- */
-submit.onclick=()=>{
-  const newTiles=[...board.querySelectorAll('.tile:not(.lock)')];
-  if(!newTiles.length)return;
-
-  /* all new tiles must share a row or col */
-  const rows=new Set(newTiles.map(t=>t.dataset.row));
-  const cols=new Set(newTiles.map(t=>t.dataset.col));
-  if(rows.size>1&&cols.size>1){alert('Tiles must align');return;}
-
-  /* must touch an existing lock unless first turn */
-  const first=board.querySelectorAll('.lock').length===0;
-  if(!first){
-    const touch=newTiles.some(t=>{
-      const r=+t.dataset.row,c=+t.dataset.col;
-      return [[1,0],[-1,0],[0,1],[0,-1]].some(([dr,dc])=>{
-        const rr=r+dr,cc=c+dc;
-        return rr>=0&&rr<SIZE&&cc>=0&&cc<SIZE &&
-               board.rows[rr].cells[cc].querySelector('.lock');
-      });
-    });
-    if(!touch){alert('Tiles must connect to existing word');return;}
-  }
-
-  /* build letter grid */
-  const grid=Array.from({length:SIZE},()=>Array(SIZE).fill(''));
-  board.querySelectorAll('.tile').forEach(t=>{
-    grid[+t.dataset.row][+t.dataset.col]=t.dataset.letter;
+  tiles.sort((a,b)=>{
+    const ra=+a.parentElement.dataset.row, rb=+b.parentElement.dataset.row;
+    const ca=+a.parentElement.dataset.col, cb=+b.parentElement.dataset.col;
+    return ra!==rb?ra-rb:ca-cb;
   });
+  const word = tiles.map(t=>t.textContent).join('').toLowerCase();
+  if(word.length<2){ alert('word must be 2+ letters'); return; }
+  if(played.has(word)){ alert('already played'); return; }
+  if(!dict.has(word)){ alert('invalid word'); return; }
 
-  /* collect words (horizontal & vertical) */
-  const list=[];
-  const pushWord=w=>w.length>1&&list.push(w);
-  for(let r=0;r<SIZE;r++){
-    let str='';for(let c=0;c<=SIZE;c++){
-      const ch=grid[r][c]||''; str+=ch;
-      if(!ch){ pushWord(str);str=''; }
-    }
-  }
-  for(let c=0;c<SIZE;c++){
-    let str='';for(let r=0;r<=SIZE;r++){
-      const ch=(grid[r]||[])[c]||''; str+=ch;
-      if(!ch){ pushWord(str);str=''; }
-    }
-  }
+  /* scoring ----------------------------------------------------------- */
+  let base=0, mult=1;
+  tiles.forEach(t=>{
+    let v=score[t.textContent];
+    const cell=t.parentElement;
+    if(cell.dataset.bonusType==='letter') v*=+cell.dataset.bonusMult;
+    if(cell.dataset.bonusType==='word')   mult*=+cell.dataset.bonusMult;
+    base+=v;
+  });
+  const gain=Math.round(base*mult);
+  total+=gain;  totalEl.textContent=total;
+  detailEl.textContent+=`${word.toUpperCase()}: ${base} × ${mult.toFixed(2)} = ${gain}\n`;
 
-  /* uniq the list so a word is scored once */
-  const words=[...new Set(list)];
-  let turn=0,lines='';
-  for(const w of words){
-    if(!dict.has(w.toLowerCase())){alert(`INVALID WORD: ${w}`);return;}
-    let pts=[...w].reduce((s,ch)=>s+points[ch],0);
-    turn+=pts; lines+=`${w}: ${pts} × 1.00 = ${pts}\n`;
-  }
-  totalEl.textContent=+totalEl.textContent+turn;
-  detail.textContent+=lines;
-
-  /* lock & recolour */
-  newTiles.forEach(t=>t.classList.add('lock'));
-  populateRack();
+  /* lock the tiles & advance turn ------------------------------------ */
+  tiles.forEach(t=>t.dataset.locked='1');
+  played.add(word);
+  if(++turn===TURNS) alert(`Game over!  Total = ${total}`);
 };
