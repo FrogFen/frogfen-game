@@ -1,8 +1,8 @@
-/*  FrogFen – play-test build v0.3.7
-    • Drag-back rack tiles, fixed starter tiles, bonuses
+/*  FrogFen – play-test build v0.3.8
+    • Drag-back rack tiles, starter tiles, bonuses
     • Submit validates primary & cross-words, scores correctly
     • Console debug logs show every word checked
-    • Dictionary look-ups are case-insensitive
+    • Clean letters stored in dataset.letter (score numbers ignored)
 ------------------------------------------------------------------------ */
 
 const BOARD_SIZE = 11;
@@ -62,7 +62,7 @@ for(let r=0;r<BOARD_SIZE;r++){
       tile._prevCell = tile.parentElement.classList.contains('cell')
         ? tile.parentElement : null;
       cell.appendChild(tile);
-      cell.dataset.letter = tile.textContent;
+      cell.dataset.letter = tile.dataset.letter;   // clean letter only
     };
     boardEl.appendChild(cell); boardCells.push(cell);
   }
@@ -119,9 +119,13 @@ bonusPlan.forEach(([t,m,cnt,cls])=>{
       cell.dataset.letter=word[i];
       cell.dataset.locked='1';
       const div=document.createElement('div');
-      div.className='fixed-tile'; div.textContent=word[i];
-      const sm=document.createElement('small'); sm.textContent=letterScores[word[i]];
-      div.appendChild(sm); cell.innerHTML=''; cell.appendChild(div);
+      div.className='fixed-tile';
+      div.textContent=word[i];
+      div.dataset.letter = word[i];                 // clean letter
+      const sm=document.createElement('small');
+      sm.textContent=letterScores[word[i]];
+      div.appendChild(sm);
+      cell.innerHTML=''; cell.appendChild(div);
     }
   };
 
@@ -133,12 +137,6 @@ bonusPlan.forEach(([t,m,cnt,cls])=>{
                      Math.floor((BOARD_SIZE-first.length)/2), 'h');
 
     let placed=1, tries=0;
-    const collectDir=(r,c,dr,dc)=>{
-      const arr=[]; while(r>=0&&r<BOARD_SIZE&&c>=0&&c<BOARD_SIZE
-        && boardCells[r*BOARD_SIZE+c].dataset.letter){
-        arr.push(boardCells[r*BOARD_SIZE+c]); r+=dr; c+=dc;
-      } return arr;
-    };
     while(placed<5&&tries<1500){
       const w=choice([...dictionary]).toUpperCase().slice(0,8);
       const dir=Math.random()<0.5?'h':'v';
@@ -182,8 +180,12 @@ const rack=[];
 while(rack.length<15) rack.push(choice(distribution));
 rack.forEach((ltr,i)=>{
   const tile=document.createElement('div');
-  tile.className='tile'; tile.id=`tile-${i}`; tile.textContent=ltr; tile.draggable=true;
-  const sm=document.createElement('small'); sm.textContent=letterScores[ltr]; tile.appendChild(sm);
+  tile.className='tile'; tile.id=`tile-${i}`;
+  tile.textContent=ltr;
+  tile.dataset.letter = ltr;          // clean letter
+  tile.draggable=true;
+  const sm=document.createElement('small'); sm.textContent=letterScores[ltr];
+  tile.appendChild(sm);
   tile.ondragstart=e=>e.dataTransfer.setData('text',tile.id);
   tile.ondragover=e=>e.preventDefault();
   tile.ondrop=e=>{
@@ -202,79 +204,5 @@ const activeTiles=()=>[...boardEl.querySelectorAll('.tile')].filter(t=>!t.datase
 const straightLine=ts=>{
   const r=ts.map(t=>+t.parentElement.dataset.row);
   const c=ts.map(t=>+t.parentElement.dataset.col);
-  return r.every(x=>x===r[0])||c.every(x=>x===c[0]);
-};
-const collect=(r,c,dr,dc)=>{
-  const arr=[];
-  while(r>=0&&r<BOARD_SIZE&&c>=0&&c<BOARD_SIZE&&boardCells[r*BOARD_SIZE+c].dataset.letter){
-    arr.push(boardCells[r*BOARD_SIZE+c]); r+=dr; c+=dc;
-  } return arr;
-};
-
-/* ── Submit / scoring with logs ─────────────────── */
-let turn=0,total=0;
-submitBtn.onclick=()=>{
-  if(turn>=3){alert('No turns left');return;}
-  const newT=activeTiles();
-  if(!newT.length){alert('Place tiles');return;}
-  if(!straightLine(newT)){alert('Tiles must form a straight line');return;}
-
-  const rows=newT.map(t=>+t.parentElement.dataset.row);
-  const cols=newT.map(t=>+t.parentElement.dataset.col);
-  const horiz=rows.every(r=>r===rows[0]);
-
-  /* main word cells */
-  let mainCells;
-  if(horiz){
-    const r=rows[0], cMin=Math.min(...cols);
-    mainCells=collect(r,cMin,0,-1).reverse().concat(collect(r,cMin+1,0,+1));
-  }else{
-    const c=cols[0], rMin=Math.min(...rows);
-    mainCells=collect(rMin,c,-1,0).reverse().concat(collect(rMin+1,c,+1,0));
-  }
-  const mainWord=mainCells.map(c=>c.dataset.letter).join('').toLowerCase();
-  console.log('Primary word:', mainWord.toUpperCase());
-
-  if(!dictionary.has(mainWord)){
-    console.log('REJECT →', mainWord.toUpperCase(), 'not in dictionary');
-    alert(`INVALID WORD: ${mainWord.toUpperCase()} not in dictionary`); return;
-  }
-
-  const words=[{cells:mainCells,word:mainWord}];
-
-  for(const t of newT){
-    const r=+t.parentElement.dataset.row;
-    const c=+t.parentElement.dataset.col;
-    const perp=horiz? collect(r,c,-1,0).reverse().concat(collect(r+1,c,+1,0))
-                     : collect(r,c,0,-1).reverse().concat(collect(r,c+1,0,+1));
-    if(perp.length>1){
-      const w=perp.map(cell=>cell.dataset.letter).join('').toLowerCase();
-      console.log('Cross-word found:', w.toUpperCase());
-      if(!dictionary.has(w)){
-        console.log('REJECT →', w.toUpperCase(), 'not in dictionary');
-        alert(`INVALID WORD: ${w.toUpperCase()} not in dictionary`); return;
-      }
-      if(w!==mainWord) words.push({cells:perp,word:w});
-    }
-  }
-
-  /* scoring */
-  let gained=0;
-  words.forEach(({cells,word})=>{
-    let base=0, mult=1;
-    cells.forEach(cell=>{
-      let pts=letterScores[cell.dataset.letter];
-      const isNew=!cell.dataset.locked;
-      if(isNew&&cell.dataset.bonusType==='letter') pts*=+cell.dataset.bonusMult;
-      if(isNew&&cell.dataset.bonusType==='word')   mult*=+cell.dataset.bonusMult;
-      base+=pts;
-    });
-    const score=Math.round(base*mult);
-    gained+=score;
-    detailBox.textContent+=`${word.toUpperCase()}: ${base} × ${mult.toFixed(2)} = ${score}\n`;
-  });
-  total+=gained; totalEl.textContent=total;
-
-  newT.forEach(t=>t.dataset.locked='1');
-  if(++turn===3) alert('Game over!  Total '+total);
-};
+  return r.every(x=>x===r[0])||c.every(x=>c
+::contentReference[oaicite:0]{index=0}
