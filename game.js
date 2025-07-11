@@ -276,6 +276,8 @@ submit.onclick=()=>{
   }
 
   total+=gained; totalEl.textContent=total;
-  nt.forEach(t=>t.dataset.locked='1');
-  if(++turn===3) alert('Game over!  Total '+total);
-};
+  nt.forEach(t => {
+  t.dataset.locked = '1';
+  t.parentElement.dataset.locked = '1';   // ← new: mark the CELL too
+});
+
