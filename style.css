@@ -1,118 +1,89 @@
-/* --- Reset & layout helpers --- */
+/* ─── Reset / layout helpers ─────────────────────────────── */
 *,
 *::before,
-*::after { box-sizing: border-box; }
+*::after { box-sizing:border-box; margin:0; padding:0; }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;          /* prevent horizontal scroll */
-  font-family: system-ui, sans-serif;
+html,body{
+  font-family:system-ui,sans-serif;
   background:#fff;
-  -webkit-tap-highlight-color: transparent;
-  text-align: center;
+  text-align:center;
 }
 
-/* ensure whole game fits on mobile */
-body { display: flex; flex-direction: column; align-items: center; }
+body{
+  display:flex;
+  flex-direction:column;
+  align-items:center;          /* centres board horizontally */
+  gap:0.6rem;
+}
 
-/* --- Board --- */
-#board-wrapper { width:min(90vmin,460px); }
-#board {
-  border-collapse: collapse;
-  margin-inline:auto;
-  table-layout: fixed;
+/* ─── Board ──────────────────────────────────────────────── */
+#board-wrapper{ width:min(88vmin,420px); }
+
+#board{
   width:100%;
-  aspect-ratio:1/1;            /* perfect square */
+  aspect-ratio:1/1;
+  border-collapse:collapse;
+  table-layout:fixed;
+  margin-inline:auto;
   user-select:none;
 }
-#board td {
+#board td{
   border:1px solid #999;
-  width:10%;
-  height:10%;
   position:relative;
 }
-#board td[data-bonus]::before {
-  content: attr(data-bonus);
+#board td[data-bonus]::before{
+  content:attr(data-bonus);
   font-size:0.55rem;
   position:absolute;
   inset:2px auto auto 2px;
-  color:#0008;
+  color:#0009;
 }
 
 /* bonus colours */
-[data-bonus="1.1×W"] { background:#d8f4d8; }
-[data-bonus="1.5×W"] { background:#99e699; }
-[data-bonus="2×W"]   { background:#4ec04e; }
-[data-bonus="2×L"],
-[data-bonus="3×L"],
-[data-bonus="5×L"]   { background:#d0c5ff; }
+[data-bonus="1.1×W"]{background:#d9f4d9;}
+[data-bonus="1.5×W"]{background:#9fe49f;}
+[data-bonus="2×W"]  {background:#55c555;}
+[data-bonus^="2×L"],
+[data-bonus^="3×L"],
+[data-bonus^="5×L"] {background:#d6cbff;}
 
-/* --- Tiles --- */
-.tile {
-  width:100%;
-  height:100%;
-  background:#e3e9f2;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-weight:700;
-  cursor:grab;
+/* ─── Tiles ──────────────────────────────────────────────── */
+.tile{
+  width:100%;height:100%;
+  background:#e9edf5;
+  display:flex;justify-content:center;align-items:center;
+  font-weight:700; cursor:grab;
 }
-.tile.lock { cursor:default; background:#dde6f5; }
-.tile.drag { opacity:0.6; }
+.tile.lock{ background:#d8e0f2; cursor:default; }
+.tile.drag{ opacity:0.6; }
+.tile.bonused{ filter:saturate(180%); }
 
-/* bonus-covered colour for newly placed tiles */
-.tile.bonused { filter:saturate(180%); }
+/* rack tiles smaller */
+#rack-bar .tile{ width:40px;height:40px; }
 
-/* --- Rack & submit --- */
-#rack-bar {
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:0.35rem;
-  margin-block:0.6rem 0.3rem;
-  flex-wrap:wrap;
+/* ─── Rack & submit ──────────────────────────────────────── */
+#rack-bar{
+  display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;
 }
-
-#letter-bank {
-  display:grid;
-  grid-template-columns: repeat(8,40px);
-  gap:0.35rem;
+#letter-bank{
+  display:grid;grid-template-columns:repeat(8,40px);gap:0.35rem;
 }
-
-#rack-bar .tile { width:40px;height:40px; }
-
-#submit-btn {
+#submit-btn{
   width:32px;height:32px;
-  background:#24b024;
-  color:#fff;
-  border:2px solid #024;
-  border-radius:4px;
-  font-size:1.05rem;
-  cursor:pointer;
+  background:#22b022;color:#fff;
+  border:2px solid #024;border-radius:4px;
+  font-size:1rem;line-height:1;cursor:pointer;
 }
 
-/* --- Score & details --- */
-#total-score-box {
-  width:100%;
-  background:#4b0057;
-  color:#fff;
-  font-size:1.35rem;
-  font-weight:600;
-  padding:0.25rem 0;
+/* ─── Score ──────────────────────────────────────────────── */
+#total-score-box{
+  width:100%;background:#4b0057;color:#fff;
+  font-size:1.35rem;font-weight:600;padding:0.25rem 0;
 }
-#detail-box {
-  width:min(95%,900px);
-  margin:0.65rem auto;
-  background:#d8f4d8;
-  padding:0.6rem 0.75rem;
-  text-align:left;
-  font-family: ui-monospace, monospace;
-  min-height:2.5rem;
-  overflow-x:auto;
-  white-space:pre-wrap;
-  word-break:break-word;
-  border-radius:4px;
+#detail-box{
+  width:min(95%,900px);margin:0 auto;
+  background:#d9f4d9;padding:0.55rem 0.8rem;
+  text-align:left;font-family:ui-monospace,monospace;
+  min-height:2.4rem;white-space:pre-wrap;
+  border-radius:4px;overflow-x:auto;
 }
