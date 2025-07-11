@@ -9,20 +9,21 @@
 <body>
   <h1>FrogFen</h1>
 
+  <!-- game board -->
   <div id="board"></div>
 
-  <!-- rack + submit side-by-side -->
-  <div id="rack-wrap">
+  <!-- rack + submit -->
+  <div id="rack-wrapper">
     <div id="letter-bank"></div>
-    <!-- green upward arrow ▲ (U+25B2) -->
-    <button id="submit-btn">&#x25B2;</button>
+    <!-- green arrow button MUST keep this id for JS -->
+    <button id="submit-btn" class="arrow-btn" aria-label="Submit turn">▲</button>
   </div>
 
-  <div id="total-score-box">
-    TOTAL: <span id="total-score">0</span>
-  </div>
+  <!-- score panels -->
+  <div id="total-bar">TOTAL: <span id="total-score">0</span></div>
   <div id="detail-box"></div>
 
+  <!-- scripts -->
   <script src="dictionary.js"></script>
   <script src="game.js"></script>
 </body>
