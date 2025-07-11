@@ -9,12 +9,13 @@
 <body>
   <h1>FrogFen</h1>
 
-  <div id="board"></div>
+  <div id="board-wrapper">
+    <table id="board" draggable="false"></table>
+  </div>
 
-  <!-- rack + submit side-by-side -->
-  <div id="rack-wrap">
+  <div id="rack-bar">
     <div id="letter-bank"></div>
-    <button id="submit-btn">SUBMIT</button>
+    <button id="submit-btn" aria-label="submit turn">▲</button>
   </div>
 
   <div id="total-score-box">TOTAL: <span id="total-score">0</span></div>
