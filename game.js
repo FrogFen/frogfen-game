@@ -256,6 +256,10 @@ submit.onclick = () => {
 
   const words=[{cells:mainCells,word:mainWord}];
 
+    /* allow single-letter main word if at least one cross word is formed */
+const singleMain = mainWord.length === 1;
+
+
   /* cross words */
   for(const t of nt){
     const r=+t.parentElement.dataset.row,
