@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>FrogFen</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>FrogFen</h1>
 
-  <div id="board-wrapper">
-    <table id="board"></table>
+  <!-- board + rack are centred by the flex wrapper -->
+  <div class="game-wrapper">
+    <div id="board"></div>
+
+    <div class="rack-bar">
+      <div id="letter-bank"></div>
+      <button id="submit-btn" aria-label="submit turn">▲</button>
+    </div>
   </div>
 
-  <div id="rack-bar">
-    <div id="letter-bank"></div>
-    <button id="submit-btn" aria-label="submit turn">▲</button>
-  </div>
-
-  <div id="total-score-box">TOTAL: <span id="total-score">0</span></div>
-  <div id="detail-box"></div>
+  <div id="total-bar">TOTAL: <span id="total-score">0</span></div>
+  <pre id="detail-box"></pre>
 
   <script src="dictionary.js"></script>
   <script src="game.js"></script>
