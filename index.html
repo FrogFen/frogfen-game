@@ -2,32 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>FrogFen</title>
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>FrogFen</h1>
 
-  <!-- Board grid -->
   <div id="board"></div>
 
-  <!-- Submit -->
-  <button id="submit-btn">SUBMIT</button>
-
-  <!-- Rack -->
-  <div id="letter-bank"></div>
-
-  <!-- Total score -->
-  <div id="total-score-box">
-    TOTAL: <span id="total-score">0</span>
+  <!-- rack + submit side-by-side -->
+  <div id="rack-wrap">
+    <div id="letter-bank"></div>
+    <button id="submit-btn">SUBMIT</button>
   </div>
 
-  <!-- Detail breakdown -->
+  <div id="total-score-box">TOTAL: <span id="total-score">0</span></div>
   <div id="detail-box"></div>
 
-  <!-- Scripts -->
   <script src="dictionary.js"></script>
   <script src="game.js"></script>
 </body>
