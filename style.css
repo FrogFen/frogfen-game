@@ -1,89 +1,97 @@
-/* ─── Reset / layout helpers ─────────────────────────────── */
-*,
-*::before,
-*::after { box-sizing:border-box; margin:0; padding:0; }
-
+/* ---- layout ---------------------------------------------------------- */
 html,body{
-  font-family:system-ui,sans-serif;
-  background:#fff;
-  text-align:center;
+  margin:0; padding:0;
+  font-family:system-ui,Segoe UI,Roboto,sans-serif;
+  background:#fafafa;
+  overscroll-behavior:none;         /* prevent bounce-scroll on mobile   */
 }
+h1{ text-align:center; margin:0.5rem 0 1rem; }
 
-body{
+.game-wrapper{
   display:flex;
   flex-direction:column;
-  align-items:center;          /* centres board horizontally */
-  gap:0.6rem;
+  align-items:center;
 }
 
-/* ─── Board ──────────────────────────────────────────────── */
-#board-wrapper{ width:min(88vmin,420px); }
-
+/* ---- board ----------------------------------------------------------- */
 #board{
-  width:100%;
-  aspect-ratio:1/1;
-  border-collapse:collapse;
-  table-layout:fixed;
-  margin-inline:auto;
+  display:grid;
+  grid-template-columns:repeat(11,35px);
+  grid-template-rows:repeat(11,35px);
+  gap:1px;
+  margin-bottom:1rem;
+}
+
+.cell{
+  width:35px; height:35px;
+  background:#fff;
+  border:1px solid #999;
+  box-sizing:border-box;
+  font:700 0.75rem/35px monospace;
+  text-align:center;
   user-select:none;
 }
-#board td{
-  border:1px solid #999;
-  position:relative;
+
+.green1 { background:#b2eeb2; }  /* 1.1× word  */
+.green15{ background:#87d787; }  /* 1.5× word  */
+.green2 { background:#4cb54c; }
+.purple2{ background:#cbb3ff; }
+.purple3{ background:#b387ff; }
+.purple5{ background:#8c4cff; }
+
+.fixed-tile , .tile{
+  width:33px; height:33px;
+  background:#dde6f0;
+  border:2px solid #000;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  font-weight:700;
+  cursor:grab;
 }
-#board td[data-bonus]::before{
-  content:attr(data-bonus);
+.fixed-tile { cursor:default; }
+
+.tile small{
   font-size:0.55rem;
-  position:absolute;
-  inset:2px auto auto 2px;
-  color:#0009;
+  line-height:0.55rem;
+  font-weight:400;
 }
 
-/* bonus colours */
-[data-bonus="1.1×W"]{background:#d9f4d9;}
-[data-bonus="1.5×W"]{background:#9fe49f;}
-[data-bonus="2×W"]  {background:#55c555;}
-[data-bonus^="2×L"],
-[data-bonus^="3×L"],
-[data-bonus^="5×L"] {background:#d6cbff;}
-
-/* ─── Tiles ──────────────────────────────────────────────── */
-.tile{
-  width:100%;height:100%;
-  background:#e9edf5;
-  display:flex;justify-content:center;align-items:center;
-  font-weight:700; cursor:grab;
-}
-.tile.lock{ background:#d8e0f2; cursor:default; }
-.tile.drag{ opacity:0.6; }
-.tile.bonused{ filter:saturate(180%); }
-
-/* rack tiles smaller */
-#rack-bar .tile{ width:40px;height:40px; }
-
-/* ─── Rack & submit ──────────────────────────────────────── */
-#rack-bar{
-  display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;
+/* ---- rack ------------------------------------------------------------ */
+.rack-bar{
+  display:flex;
+  align-items:center;
+  gap:0.5rem;
 }
 #letter-bank{
-  display:grid;grid-template-columns:repeat(8,40px);gap:0.35rem;
-}
-#submit-btn{
-  width:32px;height:32px;
-  background:#22b022;color:#fff;
-  border:2px solid #024;border-radius:4px;
-  font-size:1rem;line-height:1;cursor:pointer;
+  display:grid;
+  grid-template-columns:repeat(8,35px);
+  grid-auto-rows:35px;
+  gap:4px;
+  margin-bottom:0.5rem;
 }
 
-/* ─── Score ──────────────────────────────────────────────── */
-#total-score-box{
-  width:100%;background:#4b0057;color:#fff;
-  font-size:1.35rem;font-weight:600;padding:0.25rem 0;
+/* arrow button */
+#submit-btn{
+  width:34px; height:34px;
+  background:#1fa21f;
+  color:#fff; border:2px solid #004500;
+  font:700 1.1rem/1 "consolas";
+  cursor:pointer;
+}
+#submit-btn:active{ transform:translateY(1px); }
+
+/* ---- score bar ------------------------------------------------------- */
+#total-bar{
+  background:#49005b;
+  color:#fff; text-align:center;
+  font-size:1.4rem; font-weight:700;
+  padding:0.25rem 0;
+  margin-top:0.25rem;
 }
 #detail-box{
-  width:min(95%,900px);margin:0 auto;
-  background:#d9f4d9;padding:0.55rem 0.8rem;
-  text-align:left;font-family:ui-monospace,monospace;
-  min-height:2.4rem;white-space:pre-wrap;
-  border-radius:4px;overflow-x:auto;
+  background:#d8f0d0;
+  padding:0.5rem 0.75rem;
+  margin:0.5rem;
+  max-width:800px;
+  white-space:pre-wrap;
 }
