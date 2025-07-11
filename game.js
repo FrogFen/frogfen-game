@@ -1,274 +1,221 @@
-/* -------------  FrogFen game.js  (10×10 board)  ------------------ */
-const BOARD_SIZE = 10;
-const RACK_SIZE  = 16;
-const MAX_TURNS  = 3;
+/* ---------- FrogFen   game.js  (10×10, 16-tile rack) ------------ */
+const BOARD = 10;
+const RACK  = 16;
+const MAX_TURNS = 3;
 
-/* ── letter distribution / values (Scrabble-like) ───────────────── */
+/* ••• letter pool ••• */
 const LETTERS = [
-  { l:'E', n:12, v:1 }, { l:'A', n:9, v:1 }, { l:'I', n:9, v:1 },
-  { l:'O', n:8, v:1 },  { l:'N', n:6, v:1 }, { l:'R', n:6, v:1 },
-  { l:'T', n:6, v:1 },  { l:'L', n:4, v:1 }, { l:'S', n:4, v:1 },
-  { l:'U', n:4, v:1 },  { l:'D', n:4, v:2 }, { l:'G', n:3, v:2 },
-  { l:'B', n:2, v:3 },  { l:'C', n:2, v:3 }, { l:'M', n:2, v:3 },
-  { l:'P', n:2, v:3 },  { l:'F', n:2, v:4 }, { l:'H', n:2, v:4 },
-  { l:'V', n:2, v:4 },  { l:'W', n:2, v:4 }, { l:'Y', n:2, v:4 },
-  { l:'K', n:1, v:5 },  { l:'J', n:1, v:8 }, { l:'X', n:1, v:8 },
-  { l:'Q', n:1, v:10 }, { l:'Z', n:1, v:10 }
+  {l:'E',n:12,v:1},{l:'A',n:9,v:1},{l:'I',n:9,v:1},{l:'O',n:8,v:1},
+  {l:'N',n:6,v:1},{l:'R',n:6,v:1},{l:'T',n:6,v:1},{l:'L',n:4,v:1},
+  {l:'S',n:4,v:1},{l:'U',n:4,v:1},{l:'D',n:4,v:2},{l:'G',n:3,v:2},
+  {l:'B',n:2,v:3},{l:'C',n:2,v:3},{l:'M',n:2,v:3},{l:'P',n:2,v:3},
+  {l:'F',n:2,v:4},{l:'H',n:2,v:4},{l:'V',n:2,v:4},{l:'W',n:2,v:4},
+  {l:'Y',n:2,v:4},{l:'K',n:1,v:5},{l:'J',n:1,v:8},{l:'X',n:1,v:8},
+  {l:'Q',n:1,v:10},{l:'Z',n:1,v:10}
 ];
 
-/* ── bonus layout helpers ───────────────────────────────────────── */
-const board = document.getElementById('board');
-const rack  = document.getElementById('letter-bank');
-const totalBox = document.getElementById('total-score');
-const detailBox= document.getElementById('detail-box');
-let rackTiles   = [];
-let placedThisTurn = [];
-let totalScore  = 0;
-let turnCount   = 0;
+/* references */
+const board = document.getElementById('board'),
+      rack  = document.getElementById('letter-bank'),
+      totalBox = document.getElementById('total-score'),
+      detailBox= document.getElementById('detail-box'),
+      submitBtn= document.getElementById('submit-btn');
 
-/* random helpers (seeded per-day in real version) */
-function rand(max){return Math.floor(Math.random()*max);}
+/* state */
+const bonusMap = {};           // "r,c" → {type, mult}
+let rackTiles = [], placed = [];
+let turns=0, total=0;
 
-/* build board cells + random bonuses */
-const bonusMap = {};                    // key "r,c" => {type:'word'|'letter', mult:1.1|...}
-function addBonus(r,c,type,mult,cls,label){
-  bonusMap[`${r},${c}`]={type,mult};
-  const cell = board.children[r*BOARD_SIZE+c];
-  cell.classList.add(cls,'bonus'); cell.textContent=label;
+/* helpers */
+const rand = n => Math.floor(Math.random()*n);
+const val  = ch=>LETTERS.find(o=>o.l===ch).v;
+
+/* ---------- build empty board ---------- */
+board.style.setProperty('--sz',BOARD);
+for(let i=0;i<BOARD*BOARD;i++){
+  board.appendChild(Object.assign(document.createElement('div'),{className:'cell'}));
 }
-(function makeBoard(){
-  board.style.setProperty('--sz',BOARD_SIZE);
-  for(let i=0;i<BOARD_SIZE**2;i++){
-    const d=document.createElement('div');d.className='cell';
-    board.appendChild(d);
-  }
-  /* random green word bonuses */
-  placeRandom(5,'word',1.1,'green1','1.1xW');
-  placeRandom(3,'word',1.5,'green15','1.5xW');
-  placeRandom(1,'word',2,'green2','2xW');
-  /* random purple letter bonuses */
-  placeRandom(5,'letter',2,'purple2','2xL');
-  placeRandom(3,'letter',3,'purple3','3xL');
-  placeRandom(1,'letter',5,'purple5','5xL');
-  function placeRandom(num,type,mult,cls,label){
-    let placed=0;
-    while(placed<num){
-      const r=rand(BOARD_SIZE),c=rand(BOARD_SIZE);
-      if(!bonusMap[`${r},${c}`]){
-        addBonus(r,c,type,mult,cls,label); placed++;
-      }
+function addBonus(r,c,type,mult,cls,txt){
+  bonusMap[`${r},${c}`]={type,mult};
+  const d=board.children[r*BOARD+c];
+  d.classList.add(cls,'bonus');d.textContent=txt;
+}
+function place(n,type,mult,cls,txt){
+  let k=0;while(k<n){
+    const r=rand(BOARD),c=rand(BOARD);
+    if(!bonusMap[`${r},${c}`]){
+      addBonus(r,c,type,mult,cls,txt);k++;
     }
   }
-})();
-
-/* seed 5 interconnected words (simplified) ------------------------ */
-function seedWords(){
-  let wordsPlaced=0, attempts=0;
-  while(wordsPlaced<5 && attempts<200){
-    attempts++;
-    const word=dictionary[rand(dictionary.length)];
-    if(word.length>BOARD_SIZE) continue;
-    const horiz=Math.random()<0.5;
-    const maxStart=BOARD_SIZE-word.length;
-    const r=rand(BOARD_SIZE),c=rand(maxStart+1);
-    if(placeSeed(word.toUpperCase(),r,c,horiz)) wordsPlaced++;
-  }
 }
-function placeSeed(word,r,c,horiz){
-  for(let i=0;i<word.length;i++){
-    const rr=r+(horiz?0:i), cc=c+(horiz?i:0);
-    const cell=board.children[rr*BOARD_SIZE+cc];
-    if(cell.dataset.letter && cell.dataset.letter!==word[i]) return false;
+place(5,'word',1.1,'g11','1.1xW');
+place(3,'word',1.5,'g15','1.5xW');
+place(1,'word',2,'g2','2xW');
+place(5,'letter',2,'p2','2xL');
+place(3,'letter',3,'p3','3xL');
+place(1,'letter',5,'p5','5xL');
+
+/* ---------- seed 5 interconnected words ---------- */
+function fixedTile(ch){
+  const d=document.createElement('div');
+  d.className='fixed-tile'; d.dataset.letter=ch; d.textContent=ch;
+  d.appendChild(Object.assign(document.createElement('small'),{textContent:val(ch)}));
+  return d;
+}
+function putWord(w,r,c,h){              // h = horizontal?
+  if(h && c+w.length>BOARD) return false;
+  if(!h && r+w.length>BOARD) return false;
+  // collision check
+  for(let i=0;i<w.length;i++){
+    const rr=r+(h?0:i),cc=c+(h?i:0);
+    const cell=board.children[rr*BOARD+cc];
+    if(cell.dataset.letter && cell.dataset.letter!==w[i]) return false;
   }
-  for(let i=0;i<word.length;i++){
-    const rr=r+(horiz?0:i), cc=c+(horiz?i:0);
-    const cell=board.children[rr*BOARD_SIZE+cc];
+  // place
+  for(let i=0;i<w.length;i++){
+    const rr=r+(h?0:i),cc=c+(h?i:0),
+          cell=board.children[rr*BOARD+cc];
     if(!cell.dataset.letter){
-      const t=makeFixedTile(word[i]);
-      cell.appendChild(t);
-      cell.dataset.letter=word[i];
+      cell.appendChild(fixedTile(w[i]));
+      cell.dataset.letter=w[i];
     }
   }
   return true;
 }
-function makeFixedTile(ch){
-  const div=document.createElement('div');div.className='fixed-tile';
-  div.textContent=ch;
-  const sm=document.createElement('small');sm.textContent=letterValue(ch);
-  div.appendChild(sm);
-  return div;
-}
-seedWords();
-
-/* build rack ------------------------------------------------------ */
-function refillRack(){
-  while(rackTiles.length<RACK_SIZE){
-    const letter=getRandomLetter();
-    if(!letter) break;
-    const t=createTile(letter);
-    rack.appendChild(t); rackTiles.push(t);
+function seed(){
+  let placed=0, attempts=0;
+  while(placed<5 && attempts<300){
+    attempts++;
+    const w=dictionary[rand(dictionary.length)].toUpperCase();
+    const h=Math.random()<.5, r=rand(BOARD), c=rand(BOARD);
+    if(putWord(w,r,c,h)) placed++;
   }
 }
-function getRandomLetter(){
-  let pool=[];
-  LETTERS.forEach(o=>{for(let i=0;i<o.n;i++) pool.push(o.l)});
-  // remove already used letters
-  document.querySelectorAll('.tile,.fixed-tile').forEach(div=>{
-    const idx=pool.indexOf(div.dataset.letter);
-    if(idx>-1) pool.splice(idx,1);
-  });
-  return pool.length?pool[rand(pool.length)]:null;
+seed();
+
+/* ---------- rack ---------- */
+function tile(ch){
+  const d=document.createElement('div');
+  d.className='tile'; d.draggable=true; d.dataset.letter=ch; d.textContent=ch;
+  d.appendChild(Object.assign(document.createElement('small'),{textContent:val(ch)}));
+  d.ondragstart=e=>{e.dataTransfer.setData('id','tile');dragged=d;};
+  return d;
 }
-function createTile(ch){
-  const div=document.createElement('div');
-  div.className='tile'; div.draggable=true;
-  div.dataset.letter=ch; div.textContent=ch;
-  const sm=document.createElement('small');sm.textContent=letterValue(ch);
-  div.appendChild(sm);
-  div.addEventListener('dragstart',e=>{
-    e.dataTransfer.setData('text/plain','tile');
-    draggedTile=div;
-  });
-  return div;
+function refill(){
+  while(rackTiles.length<RACK){
+    const pool=[];LETTERS.forEach(o=>{for(let i=0;i<o.n;i++)pool.push(o.l)});
+    document.querySelectorAll('.tile,.fixed-tile').forEach(t=>{
+      const ix=pool.indexOf(t.dataset.letter);if(ix>-1) pool.splice(ix,1);
+    });
+    if(!pool.length) break;
+    const ch=pool[rand(pool.length)];
+    const t=tile(ch); rack.appendChild(t); rackTiles.push(t);
+  }
 }
-refillRack();
+let dragged=null;
+refill();
 
-/* drag & drop on board/rack -------------------------------------- */
-let draggedTile=null;
-board.addEventListener('dragover',e=>e.preventDefault());
-rack .addEventListener('dragover',e=>e.preventDefault());
-
-board.addEventListener('drop',e=>{
-  if(!draggedTile) return;
-  const cell = e.target.closest('.cell');
-  if(!cell || cell.children.length) return;
-  cell.appendChild(draggedTile);
-  rackTiles=rackTiles.filter(t=>t!==draggedTile);
-  placedThisTurn.push(draggedTile);
-  applyBonusTint(draggedTile,cell);
+/* ---------- drag / drop ---------- */
+['dragover','drop'].forEach(evt=>{
+  board.addEventListener(evt,e=>e.preventDefault());
+  rack .addEventListener(evt,e=>e.preventDefault());
 });
+board.ondrop=e=>{
+  const cell=e.target.closest('.cell');
+  if(!cell||cell.firstChild)return;
+  cell.appendChild(dragged);
+  rackTiles=rackTiles.filter(x=>x!==dragged);
+  placed.push(dragged);
+  tint(dragged,cell);
+};
+rack.ondrop=e=>{
+  if(rackTiles.includes(dragged))return;
+  const slot=[...rack.children].find(c=>!c.firstChild);
+  if(slot){slot.appendChild(dragged);rackTiles.push(dragged);untint(dragged);placed=placed.filter(x=>x!==dragged);}
+};
+/* colour-tint */
+function tint(t,cell){
+  const i=[...board.children].indexOf(cell),
+        r=Math.floor(i/BOARD),c=i%BOARD,
+        b=bonusMap[`${r},${c}`];
+  if(!b)return;
+  t.classList.add(b.type==='word'?
+                  (b.mult===2?'g2':b.mult===1.5?'g15':'g11'):
+                  (b.mult===5?'p5':b.mult===3?'p3':'p2'));
+}
+function untint(t){
+  t.classList.remove('g2','g15','g11','p5','p3','p2');
+}
 
-rack.addEventListener('drop',e=>{
-  if(!draggedTile) return;
-  if(rackTiles.includes(draggedTile)) return; // already in rack
-  const emptySpot = [...rack.children].filter(c=>!c.firstChild)[0];
-  if(!emptySpot) return;
-  emptySpot.appendChild(draggedTile);
-  removeBonusTint(draggedTile);
-  rackTiles.push(draggedTile);
-  placedThisTurn=placedThisTurn.filter(t=>t!==draggedTile);
-});
+/* ---------- submit ---------- */
+submitBtn.onclick=()=>{
+  if(!placed.length){alert('Place tiles first');return;}
+  if(turns>=MAX_TURNS){alert('No turns left');return;}
 
-/* submit turn ----------------------------------------------------- */
-document.getElementById('submit-btn').onclick=()=>{
-  if(!placedThisTurn.length){alert('Place tiles before submitting');return;}
-  if(turnCount>=MAX_TURNS){alert('No turns left');return;}
-
-  const words = collectWords();
+  const words = collect();                 // ← NEW collect() below
   if(!words.length){alert('Tiles must connect to an existing word');return;}
 
-  // dedupe same word (horizontal+vertical)
-  const uniqueWords=[...new Set(words)];
-  // filter out single-letter mains
-  if(placedThisTurn.length===1){
-    if(uniqueWords.length===1){alert('Word must be 2+ letters');return;}
-    uniqueWords.shift();            // first elem is that single letter
-  }
-
-  // dictionary check
-  const bad=uniqueWords.find(w=>!dictionary.includes(w.toLowerCase()));
+  /* dictionary */
+  const bad=words.find(w=>!dictionary.includes(w.toLowerCase()));
   if(bad){alert('INVALID WORD: '+bad);return;}
 
-  /* scoring */
-  let turnScore=0, breakdown='';
-  uniqueWords.forEach(w=>{
-    const {pts,wordMult}=scoreWord(w);
-    const total=pts*wordMult;
-    turnScore+=total;
-    breakdown+=`${w}: ${pts} × ${wordMult.toFixed(2)} = ${total}\n`;
+  /* score */
+  let turn=0, breakdown='';
+  words.forEach(w=>{
+    const {pts,mult}=score(w);
+    const s=pts*mult;turn+=s;
+    breakdown+=`${w}: ${pts} × ${mult.toFixed(2)} = ${s}\n`;
   });
-
-  // lock placed tiles
-  placedThisTurn.forEach(t=>{t.classList.add('fixed-tile');t.classList.remove('tile')});
-  placedThisTurn=[];
-  turnCount++;
-  totalScore+=turnScore;
-  totalBox.textContent=totalScore;
-
-  // append (not overwrite) detail box
+  total+=turn; totalBox.textContent=total;
   detailBox.textContent+=breakdown+'\n';
 
-  refillRack();
+  /* lock tiles */
+  placed.forEach(t=>t.classList.replace('tile','fixed-tile'));
+  placed.length=0; turns++; refill();
 };
 
-/* helpers --------------------------------------------------------- */
-function collectWords(){
-  // returns array of words made/affected this turn (main first)
-  const grid=[...Array(BOARD_SIZE)].map(()=>Array(BOARD_SIZE).fill(''));
-  document.querySelectorAll('.cell').forEach((c,i)=>{
-    if(c.dataset.letter) grid[Math.floor(i/BOARD_SIZE)][i%BOARD_SIZE]=c.dataset.letter;
+/* ---------- helpers ---------- */
+function collect(){
+  /* returns UNIQUE list of words affected this turn (main first) */
+  const grid=[...Array(BOARD)].map(()=>Array(BOARD).fill(''));
+  board.querySelectorAll('.cell').forEach((c,i)=>{
+    if(c.dataset.letter) grid[Math.floor(i/BOARD)][i%BOARD]=c.dataset.letter;
   });
-  const newCoords=placedThisTurn.map(t=>{
+  const coords=placed.map(t=>{
     const i=[...board.children].indexOf(t.parentElement);
-    return {r:Math.floor(i/BOARD_SIZE),c:i%BOARD_SIZE};
+    return{r:Math.floor(i/BOARD),c:i%BOARD};
   });
-  // main direction
-  const horiz = newCoords.every(({r})=>r===newCoords[0].r);
+  const horiz=coords.every(({r})=>r===coords[0].r);
   const words=[];
-  function scan(r,c,dr,dc){
-    let word='', rr=r, cc=c;
-    while(rr>=0&&rr<BOARD_SIZE&&cc>=0&&cc<BOARD_SIZE&&grid[rr][cc]){rr-=dr;cc-=dc}
-    rr+=dr; cc+=dc;
-    while(rr>=0&&rr<BOARD_SIZE&&cc>=0&&cc<BOARD_SIZE&&grid[rr][cc]){
-      word+=grid[rr][cc]; rr+=dr; cc+=dc;
-    }
-    return word.length>1?word:'';
-  }
-  // main word
-  const {r,c}=newCoords[0];
-  words.push(scan(r,c,0,horiz?1:0));         // horizontal main if horiz
-  // cross words
-  newCoords.forEach(({r,c})=>{
-    const w=scan(r,c,1,horiz?0:1); if(w) words.push(w);
+  const scan=(r,c,dr,dc)=>{
+    let rr=r,cc=c;while(rr-dr>=0&&cc-dc>=0&&rr-dr<BOARD&&cc-dc<BOARD&&grid[rr-dr][cc-dc]){rr-=dr;cc-=dc}
+    let w='';while(rr<BOARD&&cc<BOARD&&grid[rr][cc]){w+=grid[rr][cc];rr+=dr;cc+=dc}
+    return w.length>1?w:'';
+  };
+  /* main   */
+  words.push(scan(coords[0].r,coords[0].c,0,horiz?1:0));
+  /* crosses */
+  coords.forEach(({r,c})=>{
+    const w=scan(r,c,1,horiz?0:1);
+    if(w)words.push(w);
   });
-  return words;
+  /* remove duplicates unconditionally */
+  return [...new Set(words)];
 }
-function scoreWord(word){
-  let pts=0, wordMult=1;
-  // walk through tiles of the word
-  [...word].forEach((ch,i)=>{
-    // locate tile div
-    const tile=[...document.querySelectorAll('.fixed-tile,.tile')]
-               .find(t=>t.dataset.letter===ch && !t.scored);
-    if(tile){ tile.scored=true; } // mark once per scoring pass
-    const val=letterValue(ch); pts+=val;
-    if(tile&&tile.parentElement){
-      const idx=[...board.children].indexOf(tile.parentElement);
-      const r=Math.floor(idx/BOARD_SIZE),c=idx%BOARD_SIZE;
-      const bonus=bonusMap[`${r},${c}`];
-      if(bonus){
-        if(bonus.type==='letter') pts+=(val*(bonus.mult-1));
-        else wordMult*=bonus.mult;
-      }
+function score(word){
+  let pts=0, mult=1;
+  [...word].forEach((ch,idx)=>{
+    const tile=[...board.querySelectorAll('.fixed-tile')].find((t,i)=>!t.used&&t.dataset.letter===ch);
+    if(tile){tile.used=true;}
+    pts+=val(ch);
+    const i=[...board.children].indexOf(tile.parentElement),
+          r=Math.floor(i/BOARD),c=i%BOARD,
+          b=bonusMap[`${r},${c}`];
+    if(b){
+      if(b.type==='letter') pts+=val(ch)*(b.mult-1);
+      else mult*=b.mult;
     }
   });
-  // clear 'scored' flag
-  document.querySelectorAll('[scored]').forEach(t=>delete t.scored);
-  return {pts,wordMult};
-}
-function letterValue(ch){
-  return LETTERS.find(o=>o.l===ch).v;
-}
-function applyBonusTint(tile,cell){
-  const idx=[...board.children].indexOf(cell);
-  const r=Math.floor(idx/BOARD_SIZE),c=idx%BOARD_SIZE;
-  const bonus=bonusMap[`${r},${c}`];
-  if(bonus){
-    tile.classList.add(bonus.mult===2? (bonus.type==='word'?'green2':'purple2'):
-                       bonus.mult===1.5? (bonus.type==='word'?'green15':'purple3'):
-                       bonus.mult===1.1? 'green1':'purple5');
-  }
-}
-function removeBonusTint(tile){
-  tile.classList.remove('green1','green15','green2','purple2','purple3','purple5');
+  board.querySelectorAll('.fixed-tile').forEach(t=>delete t.used);
+  return{pts,mult};
 }
