@@ -6,30 +6,20 @@
   <title>FrogFen</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
   <h1>FrogFen</h1>
 
-  <!-- Board -->
-  <div id="board-wrapper">
-    <div id="board"></div>
+  <div id="board"></div>
+
+  <!-- rack + submit side-by-side -->
+  <div id="rack-wrap">
+    <div id="letter-bank"></div>
+    <button id="submit-btn">SUBMIT</button>
   </div>
 
-  <!-- Rack (16 tiles → 2 × 8) -->
-  <div id="rack"></div>
-
-  <!-- Submit button (green up-arrow) -->
-  <button id="submit-btn" aria-label="Submit move">▲</button>
-
-  <!-- Score bar -->
-  <div id="total-score-box">
-    TOTAL: <span id="total-score">0</span>
-  </div>
-
-  <!-- Detailed breakdown -->
+  <div id="total-score-box">TOTAL: <span id="total-score">0</span></div>
   <div id="detail-box"></div>
 
-  <!-- Scripts -->
   <script src="dictionary.js"></script>
   <script src="game.js"></script>
 </body>
