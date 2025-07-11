@@ -1,44 +1,118 @@
-/* ───── core layout – fits on phone (no scroll) ─────────────── */
-body{margin:0;font-family:Arial,Helvetica,sans-serif;text-align:center;
-     overflow:hidden;}
+/* --- Reset & layout helpers --- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
 
-/* board 10×10 – 38 px */
-#board{display:grid;grid-template-columns:repeat(10,38px);
-       grid-template-rows:repeat(10,38px);gap:1px;margin:0 auto 16px;}
-
-.cell{width:38px;height:38px;border:1px solid #999;position:relative;
-      background:#fff;}
-
-/* tiles */
-.tile,.fixed-tile{
-  width:38px;height:38px;background:#f7dfdf;border:2px solid #333;
-  box-sizing:border-box;font-size:18px;font-weight:bold;
-  display:flex;align-items:center;justify-content:center;
-  cursor:grab;position:relative;user-select:none;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;          /* prevent horizontal scroll */
+  font-family: system-ui, sans-serif;
+  background:#fff;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
 }
-.fixed-tile{background:#d6e0ec;cursor:default;}
-.tile small,.fixed-tile small{position:absolute;bottom:1px;right:2px;
-                              font-size:10px;font-weight:normal}
 
-/* rack + submit */
-#rack-wrap{display:flex;justify-content:center;gap:12px;margin-bottom:14px;}
-#letter-bank{display:grid;grid-template-columns:repeat(8,38px);
-             grid-template-rows:repeat(2,38px);gap:6px;}
-#submit-btn{align-self:center;padding:8px 22px;font-weight:bold;
-            background:#b0f0b0;border:2px solid #008600;font-size:16px;}
+/* ensure whole game fits on mobile */
+body { display: flex; flex-direction: column; align-items: center; }
 
-/* score boxes */
-#total-score-box{background:#4b0058;color:#fff;font-size:28px;padding:4px;}
-#detail-box{width:92%;margin:12px auto;background:#d6ecd0;min-height:60px;
-            text-align:left;white-space:pre;padding:8px;}
+/* --- Board --- */
+#board-wrapper { width:min(90vmin,460px); }
+#board {
+  border-collapse: collapse;
+  margin-inline:auto;
+  table-layout: fixed;
+  width:100%;
+  aspect-ratio:1/1;            /* perfect square */
+  user-select:none;
+}
+#board td {
+  border:1px solid #999;
+  width:10%;
+  height:10%;
+  position:relative;
+}
+#board td[data-bonus]::before {
+  content: attr(data-bonus);
+  font-size:0.55rem;
+  position:absolute;
+  inset:2px auto auto 2px;
+  color:#0008;
+}
 
-/* bonus cells */
-.green1 {background:#dff6df;} .green15{background:#a7eba7;}
-.green2 {background:#59c959;} .purple2{background:#e6ddff;}
-.purple3{background:#c4b2ff;} .purple5{background:#9575ff;}
-.bonus  {font-size:10px;font-weight:bold;position:absolute;top:1px;left:2px;}
+/* bonus colours */
+[data-bonus="1.1×W"] { background:#d8f4d8; }
+[data-bonus="1.5×W"] { background:#99e699; }
+[data-bonus="2×W"]   { background:#4ec04e; }
+[data-bonus="2×L"],
+[data-bonus="3×L"],
+[data-bonus="5×L"]   { background:#d0c5ff; }
 
-/* tiles inherit colour when on bonus */
-.tile.green1 {background:#dff6df;}  .tile.green15 {background:#a7eba7;}
-.tile.green2 {background:#59c959;}  .tile.purple2 {background:#e6ddff;}
-.tile.purple3{background:#c4b2ff;}  .tile.purple5 {background:#9575ff;}
+/* --- Tiles --- */
+.tile {
+  width:100%;
+  height:100%;
+  background:#e3e9f2;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-weight:700;
+  cursor:grab;
+}
+.tile.lock { cursor:default; background:#dde6f5; }
+.tile.drag { opacity:0.6; }
+
+/* bonus-covered colour for newly placed tiles */
+.tile.bonused { filter:saturate(180%); }
+
+/* --- Rack & submit --- */
+#rack-bar {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:0.35rem;
+  margin-block:0.6rem 0.3rem;
+  flex-wrap:wrap;
+}
+
+#letter-bank {
+  display:grid;
+  grid-template-columns: repeat(8,40px);
+  gap:0.35rem;
+}
+
+#rack-bar .tile { width:40px;height:40px; }
+
+#submit-btn {
+  width:32px;height:32px;
+  background:#24b024;
+  color:#fff;
+  border:2px solid #024;
+  border-radius:4px;
+  font-size:1.05rem;
+  cursor:pointer;
+}
+
+/* --- Score & details --- */
+#total-score-box {
+  width:100%;
+  background:#4b0057;
+  color:#fff;
+  font-size:1.35rem;
+  font-weight:600;
+  padding:0.25rem 0;
+}
+#detail-box {
+  width:min(95%,900px);
+  margin:0.65rem auto;
+  background:#d8f4d8;
+  padding:0.6rem 0.75rem;
+  text-align:left;
+  font-family: ui-monospace, monospace;
+  min-height:2.5rem;
+  overflow-x:auto;
+  white-space:pre-wrap;
+  word-break:break-word;
+  border-radius:4px;
+}
